@@ -1,16 +1,20 @@
 import os
+import sqlite3
+from openai import OpenAI
 from dotenv import load_dotenv
-import google.generativeai as genai
+from pathlib import Path
 from database.db import (
     buscar_por_folio,
     obtener_pagos,
     registrar_inferencia
 )
-import sqlite3
 
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-modelo = genai.GenerativeModel("gemini-1.5-flash")
+load_dotenv(Path(__file__).parent.parent / ".env")
+
+cliente = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY")
+)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "database", "apartados.db")
 
@@ -28,10 +32,7 @@ def obtener_inferencias(folio=None):
     return [dict(r) for r in resultados]
 
 def generar_resumen_venta(folio):
-    """
-    Genera un resumen completo de la venta usando Gemini.
-    Explica todas las decisiones tomadas por los agentes.
-    """
+    """Genera un resumen completo de la venta usando OpenRouter."""
     apartado = buscar_por_folio(folio)
     if not apartado:
         return {
@@ -78,8 +79,11 @@ Responde en español, de forma clara y empática.
 """
 
     try:
-        respuesta = modelo.generate_content(prompt)
-        resumen_texto = respuesta.text
+        respuesta = cliente.chat.completions.create(
+            model="google/gemma-4-31b-it:free",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        resumen_texto = respuesta.choices[0].message.content
 
         registrar_inferencia(
             folio=folio,
@@ -101,16 +105,14 @@ Responde en español, de forma clara y empática.
         }
 
     except Exception as e:
+        print(f"Error en generar_resumen_venta: {e}")
         return {
             "exito": False,
             "mensaje": f"Error al generar resumen: {str(e)}"
         }
 
 def explicar_decision(regla):
-    """
-    Explica en lenguaje natural qué hace una regla específica.
-    Esto es la EXPLICABILIDAD que pide el profesor.
-    """
+    """Explica en lenguaje natural qué hace una regla específica."""
     explicaciones = {
         "REGLA_MONTO_INVALIDO": (
             "Esta regla protege al negocio y al cliente. "
@@ -154,17 +156,13 @@ def explicar_decision(regla):
             "cuando la escuela publica las listas oficiales."
         ),
     }
-
     return explicaciones.get(
         regla,
         f"La regla '{regla}' es una verificación interna del sistema experto."
     )
 
 def validar_apartado_final(folio, nombre_tutor_confirmado):
-    """
-    Solicita validación final del tutor antes de confirmar el apartado.
-    REGLA: IF datos_correctos AND tutor_confirma THEN apartado_confirmado
-    """
+    """Verifica la identidad del tutor antes de mostrar información."""
     apartado = buscar_por_folio(folio)
     if not apartado:
         return {"valido": False, "mensaje": "Folio no encontrado."}
