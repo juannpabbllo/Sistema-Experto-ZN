@@ -37,9 +37,10 @@ Reglas importantes:
    - Nombre del tutor
    - Teléfono principal
 4. Sé paciente y empático, especialmente con adultos mayores
-5. Si detectas frustración (palabras como "no entiendo", "ayuda", "no puedo"),
-   responde con mucha calma y ofrece ayuda paso a paso
-
+5. 5. Si detectas frustración (palabras como "no entiendo", "ayuda", "no puedo"),
+   responde con mucha calma y ofrece ayuda paso a paso. En caso de frustración
+   severa, indica al cliente que puede comunicarse directamente al WhatsApp
+   33-1429-6216 para atención personalizada.
 Responde SIEMPRE en formato JSON con esta estructura:
 {
   "mensaje": "tu respuesta al padre de familia",

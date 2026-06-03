@@ -50,13 +50,14 @@ if len(st.session_state.historial) == 0:
     with col1:
         if st.button("📝 Hacer un nuevo apartado", use_container_width=True):
             st.session_state.etapa = "nuevo_apartado"
+            mensaje_inicio = "¡Con gusto te ayudo! Para apartar el paquete de útiles de tu hijo necesito algunos datos. ¿Me puedes decir el **nombre completo del alumno** (con los dos apellidos)?"
             st.session_state.historial.append({
                 "rol": "assistant",
                 "contenido": bienvenida
             })
             st.session_state.historial.append({
-                "rol": "user",
-                "contenido": "Quiero hacer un nuevo apartado"
+                "rol": "assistant",
+                "contenido": mensaje_inicio
             })
             st.rerun()
 
@@ -77,6 +78,14 @@ if len(st.session_state.historial) == 0:
 if st.session_state.etapa == "nuevo_apartado":
 
     if not st.session_state.datos_sesion.get("datos_completos"):
+        if st.button("↩️ Regresar al inicio"):
+            st.session_state.historial = []
+            st.session_state.datos_sesion = {}
+            st.session_state.etapa = "inicio"
+            st.session_state.folio_actual = None
+            if "monto_seleccionado" in st.session_state:
+                st.session_state.monto_seleccionado = None
+            st.rerun()
         mensaje_usuario = st.chat_input("Escribe tu mensaje aquí...")
 
         if mensaje_usuario:
@@ -249,9 +258,9 @@ elif st.session_state.etapa == "resumen":
 
 # ─── Sidebar con información ──────────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://via.placeholder.com/150x50?text=Papelería+ZN", use_column_width=True)
+    st.image("https://via.placeholder.com/150x50?text=Papelería+ZN", use_container_width=True)
     st.markdown("### 📞 Contacto")
-    st.markdown("WhatsApp: 33-XXXX-XXXX")
+    st.markdown("WhatsApp: 33-1429-6216")
     st.markdown("Horario: Lun-Sáb 9am-7pm")
     st.divider()
     st.markdown("### ℹ️ Información")

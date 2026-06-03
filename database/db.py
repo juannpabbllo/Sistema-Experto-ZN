@@ -118,13 +118,17 @@ def buscar_por_telefono(telefono):
     return [dict(r) for r in resultados]
 
 def verificar_duplicado(nombre_alumno, grado):
-    """Verifica si ya existe un apartado para ese alumno y grado."""
+    """Verifica duplicados ignorando espacios extra, acentos y mayúsculas."""
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # Normalizar el nombre eliminando espacios extra
+    nombre_normalizado = " ".join(nombre_alumno.lower().strip().split())
+    
     cursor.execute("""
         SELECT * FROM apartados 
-        WHERE LOWER(nombre_alumno) = LOWER(?) AND grado = ?
-    """, (nombre_alumno, grado))
+        WHERE LOWER(TRIM(nombre_alumno)) = ? AND LOWER(TRIM(grado)) = LOWER(TRIM(?))
+    """, (nombre_normalizado, grado))
     resultado = cursor.fetchone()
     conn.close()
     return dict(resultado) if resultado else None
