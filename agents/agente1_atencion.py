@@ -1,6 +1,8 @@
 import os
 import json
+import time
 from openai import OpenAI
+from pathlib import Path
 from dotenv import load_dotenv
 from database.db import (
     verificar_duplicado,
@@ -9,13 +11,18 @@ from database.db import (
     registrar_inferencia
 )
 
-from pathlib import Path
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 cliente = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY")
 )
+
+MODELOS = [
+    "google/gemma-4-31b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "openai/gpt-oss-120b:free",
+]
 
 GRADOS_VALIDOS = [
     "1° primaria", "2° primaria", "3° primaria",
@@ -37,10 +44,11 @@ Reglas importantes:
    - Nombre del tutor
    - Teléfono principal
 4. Sé paciente y empático, especialmente con adultos mayores
-5. 5. Si detectas frustración (palabras como "no entiendo", "ayuda", "no puedo"),
+5. Si detectas frustración (palabras como "no entiendo", "ayuda", "no puedo"),
    responde con mucha calma y ofrece ayuda paso a paso. En caso de frustración
    severa, indica al cliente que puede comunicarse directamente al WhatsApp
    33-1429-6216 para atención personalizada.
+
 Responde SIEMPRE en formato JSON con esta estructura:
 {
   "mensaje": "tu respuesta al padre de familia",
@@ -55,6 +63,24 @@ Responde SIEMPRE en formato JSON con esta estructura:
   "datos_completos": false
 }
 """
+
+def llamar_modelo(prompt):
+    """Intenta con varios modelos en orden hasta que uno funcione."""
+    for modelo in MODELOS:
+        try:
+            print(f"Intentando con modelo: {modelo}")
+            respuesta = cliente.chat.completions.create(
+                model=modelo,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            texto = respuesta.choices[0].message.content.strip()
+            print(f"✅ Modelo {modelo} respondió correctamente")
+            return texto
+        except Exception as e:
+            print(f"❌ Modelo {modelo} falló: {e}")
+            time.sleep(1)
+            continue
+    return None
 
 def detectar_intencion(mensaje_usuario, historial=[]):
     """Usa OpenRouter para entender qué quiere el usuario."""
@@ -74,11 +100,10 @@ Nuevo mensaje del usuario: {mensaje_usuario}
 
 Responde SOLO con el JSON, sin texto adicional.
 """
-        respuesta = cliente.chat.completions.create(
-            model="google/gemma-4-31b-it:free",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        texto = respuesta.choices[0].message.content.strip()
+        texto = llamar_modelo(prompt)
+
+        if not texto:
+            raise Exception("Todos los modelos fallaron")
 
         if texto.startswith("```"):
             texto = texto.split("```")[1]
@@ -90,7 +115,7 @@ Responde SOLO con el JSON, sin texto adicional.
     except Exception as e:
         print(f"Error en detectar_intencion: {e}")
         return {
-            "mensaje": "Disculpa, tuve un problema técnico. ¿Puedes repetir tu mensaje?",
+            "mensaje": "Disculpa, tuve un problema técnico. Por favor intenta de nuevo o comunícate al WhatsApp 33-1429-6216.",
             "intencion": "otro",
             "datos_recolectados": {},
             "frustrado": False,

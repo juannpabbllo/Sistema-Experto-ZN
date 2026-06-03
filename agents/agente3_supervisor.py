@@ -1,4 +1,5 @@
 import os
+import time
 import sqlite3
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -16,7 +17,31 @@ cliente = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY")
 )
 
+MODELOS = [
+    "google/gemma-4-31b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "openai/gpt-oss-120b:free",
+]
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "database", "apartados.db")
+
+def llamar_modelo(prompt):
+    """Intenta con varios modelos en orden hasta que uno funcione."""
+    for modelo in MODELOS:
+        try:
+            print(f"Intentando con modelo: {modelo}")
+            respuesta = cliente.chat.completions.create(
+                model=modelo,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            texto = respuesta.choices[0].message.content.strip()
+            print(f"✅ Modelo {modelo} respondió correctamente")
+            return texto
+        except Exception as e:
+            print(f"❌ Modelo {modelo} falló: {e}")
+            time.sleep(1)
+            continue
+    return None
 
 def obtener_inferencias(folio=None):
     """Obtiene el historial de inferencias de la base de datos."""
@@ -79,11 +104,10 @@ Responde en español, de forma clara y empática.
 """
 
     try:
-        respuesta = cliente.chat.completions.create(
-            model="google/gemma-4-31b-it:free",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        resumen_texto = respuesta.choices[0].message.content
+        resumen_texto = llamar_modelo(prompt)
+
+        if not resumen_texto:
+            raise Exception("Todos los modelos fallaron")
 
         registrar_inferencia(
             folio=folio,
