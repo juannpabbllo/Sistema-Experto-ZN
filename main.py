@@ -13,6 +13,11 @@ st.set_page_config(
     page_icon="📚",
     layout="centered"
 )
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📚 Cuadernos ZN")
 st.subheader("Sistema de Apartado de Útiles Escolares")
@@ -269,3 +274,4 @@ with st.sidebar:
     st.markdown("- Grados: **1° a 3° Secundaria**")
     st.divider()
     st.caption("Sistema Experto ZN v1.0")
+    st.page_link("pages/admin.py", label="Administrador", icon="🔐")
