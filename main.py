@@ -159,6 +159,20 @@ if st.session_state.etapa == "nuevo_apartado":
 
             with col_a:
                 if st.button("🏦 Transferencia bancaria", use_container_width=True):
+                    if st.button("🏦 Transferencia bancaria", use_container_width=True):
+                        st.info("""
+                        **📋 Datos para tu transferencia:**
+                    
+                        🏦 Banco: BBVA  
+                        👤 Titular: Nombre del titular  
+                        🔢 CLABE: XXXXXXXXXXXXXXXXXX  
+                    
+                        📝 **Concepto EXACTO a escribir:**  
+                        `{} ZN-XXXXXX`
+                    
+                        📸 Una vez realizada, envía tu comprobante al WhatsApp **33-1429-6216**
+                        """.format(st.session_state.datos_sesion.get('nombre_alumno', '')))
+                        
                     with st.spinner("Registrando apartado..."):
                         resultado = procesar_nuevo_apartado(
                             st.session_state.datos_sesion,
@@ -194,6 +208,10 @@ if st.session_state.etapa == "nuevo_apartado":
 
 # ─── Etapa: Consulta ──────────────────────────────────────────────────────────
 elif st.session_state.etapa == "consulta":
+    if st.button("↩️ Regresar al inicio"):
+        st.session_state.etapa = "inicio"
+        st.session_state.historial = []
+        st.rerun()
     st.markdown("### 🔍 ¿Cómo deseas consultar tu apartado?")
 
     col1, col2 = st.columns(2)
@@ -207,6 +225,9 @@ elif st.session_state.etapa == "consulta":
             st.rerun()
 
 elif st.session_state.etapa == "consulta_folio":
+    if st.button("↩️ Regresar"):
+        st.session_state.etapa = "consulta"
+        st.rerun()
     folio_input = st.text_input("Ingresa tu número de folio (ej: ZN-123456):")
     nombre_tutor_input = st.text_input("Ingresa el nombre del tutor registrado:")
 
@@ -224,6 +245,9 @@ elif st.session_state.etapa == "consulta_folio":
                 st.error(validacion["mensaje"])
 
 elif st.session_state.etapa == "consulta_telefono":
+    if st.button("↩️ Regresar"):
+        st.session_state.etapa = "consulta"
+        st.rerun()
     telefono_input = st.text_input("Ingresa tu número de teléfono:")
     if st.button("🔍 Buscar", use_container_width=True):
         if telefono_input:
