@@ -80,6 +80,103 @@ with tab1:
     if not df.empty:
         st.dataframe(df, use_container_width=True, hide_index=True)
         st.markdown(f"**Total de apartados:** {len(df)}")
+
+        st.divider()
+        st.markdown("### ✏️ Modificar un apartado")
+
+        folio_sel = st.selectbox("Selecciona el folio a modificar:", df["folio"].tolist())
+
+        if folio_sel:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM apartados WHERE folio = ?", (folio_sel,))
+            reg = dict(cursor.fetchone())
+            conn.close()
+
+            col1, col2 = st.columns(2)
+            with col1:
+                nuevo_nombre = st.text_input("Nombre del alumno:", value=reg["nombre_alumno"])
+                nuevo_grado = st.selectbox("Grado:", [
+                    "1° primaria", "2° primaria", "3° primaria",
+                    "4° primaria", "5° primaria", "6° primaria",
+                    "1° secundaria", "2° secundaria", "3° secundaria"
+                ], index=["1° primaria", "2° primaria", "3° primaria",
+                    "4° primaria", "5° primaria", "6° primaria",
+                    "1° secundaria", "2° secundaria", "3° secundaria"
+                ].index(reg["grado"]) if reg["grado"] in [
+                    "1° primaria", "2° primaria", "3° primaria",
+                    "4° primaria", "5° primaria", "6° primaria",
+                    "1° secundaria", "2° secundaria", "3° secundaria"
+                ] else 0)
+                nuevo_tutor = st.text_input("Nombre del tutor:", value=reg["nombre_tutor"])
+
+            with col2:
+                nuevo_telefono = st.text_input("Teléfono principal:", value=reg["telefono_principal"])
+                nuevo_estado = st.selectbox("Estado:", ["pendiente", "pagado", "cancelado", "entregado"],
+                    index=["pendiente", "pagado", "cancelado", "entregado"].index(reg["estado"])
+                    if reg["estado"] in ["pendiente", "pagado", "cancelado", "entregado"] else 0)
+
+            col_guardar, col_cancelar_reg = st.columns(2)
+            with col_guardar:
+                if st.button("💾 Guardar cambios", use_container_width=True):
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE apartados
+                        SET nombre_alumno = ?, grado = ?, nombre_tutor = ?,
+                            telefono_principal = ?, estado = ?
+                        WHERE folio = ?
+                    """, (nuevo_nombre, nuevo_grado, nuevo_tutor,
+                          nuevo_telefono, nuevo_estado, folio_sel))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"✅ Apartado {folio_sel} actualizado correctamente.")
+                    st.rerun()
+
+            with col_cancelar_reg:
+                if st.button("❌ Cancelar este apartado", use_container_width=True):
+                    st.session_state[f"confirmar_cancelar_{folio_sel}"] = True
+
+            if st.session_state.get(f"confirmar_cancelar_{folio_sel}", False):
+                st.warning(f"⚠️ ¿Estás seguro de que deseas cancelar el apartado **{folio_sel}**?")
+                col_si, col_no = st.columns(2)
+                with col_si:
+                    if st.button("✅ Sí, cancelar", use_container_width=True):
+                        conn = get_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE apartados SET estado = 'cancelado' WHERE folio = ?", (folio_sel,))
+                        conn.commit()
+                        conn.close()
+                        st.session_state[f"confirmar_cancelar_{folio_sel}"] = False
+                        st.success(f"Apartado {folio_sel} cancelado.")
+                        st.rerun()
+                with col_no:
+                    if st.button("❌ No, regresar", use_container_width=True):
+                        st.session_state[f"confirmar_cancelar_{folio_sel}"] = False
+                        st.rerun()
+
+        st.divider()
+        st.markdown("### 🗑️ Eliminar un apartado")
+        st.caption("⚠️ Esta acción es permanente y no se puede deshacer.")
+
+        folio_borrar = st.text_input("Escribe el folio exacto para eliminar:")
+        confirmar = st.checkbox("Confirmo que quiero eliminar este registro permanentemente")
+
+        if st.button("🗑️ Eliminar registro", use_container_width=True):
+            if folio_borrar and confirmar:
+                conn = get_connection()
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM apartados WHERE folio = ?", (folio_borrar,))
+                cursor.execute("DELETE FROM pagos WHERE folio = ?", (folio_borrar,))
+                cursor.execute("DELETE FROM inferencias WHERE folio = ?", (folio_borrar,))
+                conn.commit()
+                conn.close()
+                st.success(f"✅ Registro {folio_borrar} eliminado completamente.")
+                st.rerun()
+            elif not confirmar:
+                st.error("Debes marcar la casilla de confirmación para eliminar.")
+            else:
+                st.error("Escribe el folio exacto para eliminar.")
     else:
         st.info("No hay apartados que coincidan con la búsqueda.")
 
